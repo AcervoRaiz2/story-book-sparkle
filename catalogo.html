@@ -497,10 +497,29 @@
   // ---------------------------------------------------------------------
   // Render de tarjetas
   // ---------------------------------------------------------------------
+  // Portada de color para libros sin imagen: color y emoji estables por título.
+  const PH_PALETTE = [
+    ["--verdeazul","--verdeclaro"], ["--azulvioleta","--rojovioleta"],
+    ["--esmeralda","--verdeamarillo"], ["--azul","--verdeazul"],
+    ["--rojovioleta","--ocre"], ["--verde","--esmeralda"],
+    ["--ocre","--verdeamarillo"], ["--carmin","--rojovioleta"]
+  ];
+  const PH_EMOJIS = ["📖","📚","🌱","🦋","⭐","🌈","🐦","🌻","🚀","🐌"];
+  function phHash(s){
+    let h = 0; for(const c of String(s||"libro")) h = (h*31 + c.charCodeAt(0)) % 100003;
+    return h;
+  }
   function coverImg(b){
-    return b.portadaUrl
-      ? `<img src="${escapeHtml(b.portadaUrl)}" alt="Carátula de ${escapeHtml(b.titulo)}" loading="lazy">`
-      : `<div class="ph">📖</div>`;
+    if(b.portadaUrl){
+      return `<img src="${escapeHtml(b.portadaUrl)}" alt="Carátula de ${escapeHtml(b.titulo)}" loading="lazy">`;
+    }
+    const h = phHash((b.titulo||"") + "·" + (b.autor||""));
+    const [c1, c2] = PH_PALETTE[h % PH_PALETTE.length];
+    const em = PH_EMOJIS[Math.floor(h/7) % PH_EMOJIS.length];
+    return `<div class="ph ph-color" style="background:linear-gradient(150deg, var(${c1}), var(${c2}))">
+      <span class="ph-em">${em}</span>
+      <span class="ph-t">${escapeHtml(b.titulo||"Sin título")}</span>
+    </div>`;
   }
   function cardHtml(b){
     const dispChip = b.estado === "disponible" ? `<span class="chip disp">Disponible</span>` : (b.estado === "perdido" ? `<span class="chip perdido">No disponible</span>` : `<span class="chip prest">Prestado</span>`);
