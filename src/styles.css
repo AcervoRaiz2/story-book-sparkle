@@ -142,3 +142,18 @@
     color: var(--color-foreground);
   }
 }
+
+/* Paleta del catálogo infantil */
+@theme inline {
+  --color-kid-sun: #e4c261;
+  --color-kid-brick: #8b4545;
+  --color-kid-berry: #ab477b;
+  --color-kid-grape: #7a4b98;
+  --color-kid-sky: #4a69ac;
+  --color-kid-teal: #447f8d;
+  --color-kid-forest: #468b69;
+  --color-kid-mint: #89c4b1;
+  --color-kid-leaf: #6bb96b;
+  --color-kid-lime: #accb49;
+  --color-kid-cream: #fdf6e6;
+}
