@@ -12,6 +12,8 @@
   Para GitHub Pages: sube este archivo (puedes llamarlo catalogo.html o
   index.html) a un repositorio y activa Pages — no necesita build.
 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -174,18 +176,18 @@
   .card .cover img{ width:100%; height:100%; object-fit:cover; }
   .card .cover .ph{ font-family:'Baloo 2',sans-serif; font-size:30px; color: var(--ink-soft); opacity:.5; }
   /* Portada de color cuando el libro no tiene imagen */
-  .cover .ph-color{
+  .card .cover .ph-color, .book-detail .cover-lg .ph-color{
     width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;
     gap:6px; padding:14px; text-align:center; color:#fff8ea; opacity:1; position:relative; overflow:hidden;
   }
-  .cover .ph-color::before{
+  .card .cover .ph-color::before, .book-detail .cover-lg .ph-color::before{
     content:""; position:absolute; inset:0;
     background-image: radial-gradient(circle at 18% 18%, rgba(255,248,234,.28) 0 12%, transparent 13%),
                       radial-gradient(circle at 78% 32%, rgba(255,248,234,.20) 0 9%, transparent 10%),
                       radial-gradient(circle at 32% 82%, rgba(255,248,234,.18) 0 11%, transparent 12%);
   }
-  .cover .ph-color .ph-em{ position:relative; font-size:34px; line-height:1; filter: drop-shadow(0 2px 3px rgba(0,0,0,.2)); }
-  .cover .ph-color .ph-t{
+  .card .cover .ph-color .ph-em, .book-detail .cover-lg .ph-color .ph-em{ position:relative; font-size:34px; line-height:1; filter: drop-shadow(0 2px 3px rgba(0,0,0,.2)); }
+  .card .cover .ph-color .ph-t{
     position:relative; font-family:'Baloo 2',sans-serif; font-weight:800; font-size:14.5px; line-height:1.15;
     text-shadow: 0 2px 4px rgba(0,0,0,.22); display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden;
   }
@@ -220,7 +222,7 @@
   .modal{ background:#fff8ea; border:5px solid var(--carmin); border-radius: 32px; max-width: 780px; width:100%; max-height: 88vh; overflow:auto; box-shadow: var(--shadow-lg); position:relative; }
   .modal-close{ position:absolute; top:16px; right:16px; background: var(--ocre); border:3px solid var(--carmin); width:36px; height:36px; border-radius:50%; font-weight:800; font-size:17px; color:var(--carmin); z-index:2; box-shadow:0 3px 0 var(--carmin); }
   .book-detail{ display:flex; gap: 24px; padding: 30px 28px 28px; flex-wrap:wrap; }
-  .book-detail .cover-lg{ width: 220px; flex:none; border-radius: 20px; overflow:hidden; background: var(--panel-2); aspect-ratio:3/4; border:4px solid var(--carmin); box-shadow: var(--shadow); }
+  .book-detail .cover-lg{ display:flex; width: 220px; flex:none; border-radius: 20px; overflow:hidden; background: var(--panel-2); aspect-ratio:3/4; border:4px solid var(--carmin); box-shadow: var(--shadow); }
   .book-detail .cover-lg img{ width:100%; height:100%; object-fit:cover; }
   .book-detail .meta{ flex:1; min-width:240px; }
   .book-detail h2{ font-size: 26px; margin-bottom: 3px; }
