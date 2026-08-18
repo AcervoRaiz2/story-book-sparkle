@@ -1,0 +1,1004 @@
+<!--
+  Biblioteca Comunitaria Raíz de Barro — Catálogo público
+  ----------------------------------------------------------------------
+  Archivo único (HTML + CSS + JS). Se conecta a la MISMA base de Supabase
+  que usa el acervo (index.html), así que los libros que ahí se registran
+  aparecen aquí automáticamente.
+
+  ANTES DE USAR: ejecuta el archivo supabase-catalogo-setup.sql en el
+  SQL Editor de tu proyecto de Supabase (una sola vez). Eso habilita la
+  lectura pública del catálogo y crea la tabla de solicitudes de préstamo.
+
+  Para GitHub Pages: sube este archivo (puedes llamarlo catalogo.html o
+  index.html) a un repositorio y activa Pages — no necesita build.
+-->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg: #fdf6e6;
+    --panel: #ffffff;
+    --panel-2: rgba(68,127,141,0.08);
+    --ink: #8b4545;
+    --ink-soft: #7a4b98;
+    --line: rgba(139,69,69,0.18);
+
+    --ocre: #e4c261;
+    --carmin: #8b4545;
+    --rojovioleta: #ab477b;
+    --azulvioleta: #7a4b98;
+    --azul: #4a69ac;
+    --verdeazul: #447f8d;
+    --verde: #468b69;
+    --verdeclaro: #89c4b1;
+    --esmeralda: #6bb96b;
+    --verdeamarillo: #accb49;
+
+    --teal: var(--verdeazul);
+    --danger: var(--carmin);
+    --radius: 22px;
+    --shadow: 0 6px 0 rgba(139,69,69,0.16);
+    --shadow-lg: 0 8px 0 rgba(139,69,69,0.14), 0 18px 34px rgba(139,69,69,0.12);
+    font-size: 16px;
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin:0; background: var(--bg); color: var(--ink);
+    font-family: 'Inter', system-ui, sans-serif; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    background-image:
+      radial-gradient(circle at 12% 6%, rgba(228,194,97,0.30) 0, transparent 34%),
+      radial-gradient(circle at 88% 12%, rgba(107,185,107,0.24) 0, transparent 32%),
+      radial-gradient(circle at 92% 88%, rgba(122,75,152,0.18) 0, transparent 36%),
+      radial-gradient(circle at 6% 78%, rgba(68,127,141,0.18) 0, transparent 34%);
+    background-attachment: fixed;
+  }
+  .wrap{ max-width: 1180px; margin:0 auto; padding: 18px 20px 70px; }
+  h1,h2,h3{ font-family:'Baloo 2', Georgia, sans-serif; margin:0; }
+  .hand{ font-family:'Fredoka', 'Baloo 2', sans-serif; }
+  a{ color: inherit; }
+  button{ font-family:'Baloo 2','Inter', sans-serif; cursor:pointer; }
+
+  /* ---------- Header ---------- */
+  header.top{
+    display:flex; align-items:center; justify-content:space-between; gap:14px;
+    background: var(--verdeazul);
+    color: #fff8ea;
+    border: 4px solid var(--carmin);
+    border-radius: 30px;
+    box-shadow: var(--shadow);
+    padding: 16px 22px; margin: 6px 0 22px; flex-wrap: wrap;
+    position: relative; overflow: hidden;
+  }
+  header.top::before{
+    content:""; position:absolute; top:-46px; left:-30px; width:130px; height:130px;
+    border-radius:50%; background: rgba(137,196,177,0.35); pointer-events:none;
+  }
+  header.top::after{
+    content:""; position:absolute; bottom:-58px; right:8%; width:150px; height:150px;
+    border-radius:50%; background: rgba(228,194,97,0.28); pointer-events:none;
+  }
+  .brand{ display:flex; align-items:center; gap:14px; position:relative; z-index:1; }
+  .brand .blob{
+    width:54px; height:54px; border-radius: 40% 60% 55% 45% / 50% 45% 55% 50%;
+    background: conic-gradient(from 20deg, var(--ocre), var(--esmeralda), var(--verdeclaro), var(--azulvioleta), var(--rojovioleta), var(--ocre));
+    border: 3px solid #fff8ea;
+    flex: none;
+  }
+  .logo-slot img{ width:54px; height:54px; border-radius: 18px; object-fit:cover; flex:none; display:block; border:3px solid #fff8ea; }
+
+  .theme-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 14px; margin: 14px 0 18px; }
+  .theme-field{ display:flex; align-items:center; gap:10px; background: var(--panel-2); border:2px solid var(--line); border-radius: 16px; padding: 8px 10px; }
+  .theme-field input[type=color]{ width:34px; height:34px; border:none; border-radius:10px; padding:0; background:none; flex:none; cursor:pointer; }
+  .theme-field label{ font-size:12.5px; font-weight:700; color: var(--ink); }
+
+  .crop-viewport{
+    position:relative; width:100%; max-width:480px; aspect-ratio: 3/1; margin:0 auto;
+    overflow:hidden; border-radius: 20px; background:#1a1a1a; touch-action:none; cursor:grab;
+    border:3px solid var(--line);
+  }
+  .crop-viewport:active{ cursor:grabbing; }
+  .crop-viewport img{ position:absolute; top:0; left:0; user-select:none; -webkit-user-drag:none; pointer-events:none; }
+  .brand h1{ font-size: 26px; font-weight:800; color:#fff8ea; line-height:1.1; letter-spacing:.01em; }
+  .brand .sub{ font-family:'Fredoka','Baloo 2',sans-serif; font-size: 12.5px; color: rgba(255,248,234,.85); font-weight:600; letter-spacing:.02em; }
+  .top-actions{ display:flex; align-items:center; gap:10px; position:relative; z-index:1; flex-wrap:wrap; }
+  .pill-btn{
+    border:3px solid var(--carmin); border-radius:999px; padding:10px 20px; font-weight:700; font-size:13.5px;
+    box-shadow: 0 4px 0 var(--carmin); transition: transform .12s ease, box-shadow .12s ease;
+    background: var(--ocre); color: var(--carmin);
+  }
+  .pill-btn:hover{ transform: translateY(-2px); box-shadow: 0 6px 0 var(--carmin); }
+  .pill-btn:active{ transform: translateY(2px); box-shadow: 0 2px 0 var(--carmin); }
+  .pill-btn.primary{ background: var(--esmeralda); color:#fff8ea; }
+  .pill-btn.ghost{ background:#fff8ea; color: var(--ink); }
+  .pill-btn.small{ padding:8px 15px; font-size:12.5px; }
+
+  /* ---------- Hero carrusel ---------- */
+  .hero{
+    position:relative; border-radius: 34px; overflow:hidden; margin: 6px 0 26px;
+    border: 5px solid var(--carmin);
+    box-shadow: var(--shadow);
+    background: linear-gradient(120deg, var(--verdeazul), var(--azulvioleta) 60%, var(--rojovioleta));
+    aspect-ratio: 3 / 1;
+  }
+  .hero-track{ display:flex; height:100%; transition: transform .5s cubic-bezier(.65,0,.35,1); }
+  .hero-slide{
+    min-width:100%; height:100%; position:relative; display:flex; align-items:flex-end;
+    background-size: cover; background-position:center;
+  }
+  .hero-slide::after{
+    content:""; position:absolute; inset:0;
+    background: linear-gradient(0deg, rgba(75,30,45,0.66), rgba(75,30,45,0) 58%);
+  }
+  .hero-slide .cap{ position:relative; z-index:1; color:#fff8ea; padding: 18px 24px; font-family:'Fredoka',sans-serif; font-weight:600; font-size:19px; text-shadow: 0 2px 8px rgba(0,0,0,.35); }
+  .hero-slide.empty{ align-items:center; justify-content:center; }
+  .hero-slide.empty .cap{ font-size: 16px; opacity:.95; text-align:center; }
+  .hero-dots{ position:absolute; bottom:12px; right:18px; z-index:2; display:flex; gap:7px; }
+  .hero-dots span{ width:10px; height:10px; border-radius:50%; background: rgba(255,248,234,.55); border:2px solid rgba(139,69,69,.25); cursor:pointer; }
+  .hero-dots span.active{ background: var(--ocre); }
+  .hero-nav{ position:absolute; top:50%; transform:translateY(-50%); z-index:2; background:#fff8ea; border:3px solid var(--carmin); width:38px; height:38px; border-radius:50%; font-weight:800; font-size:18px; color:var(--ink); box-shadow:0 3px 0 var(--carmin); }
+  .hero-nav.prev{ left:14px; } .hero-nav.next{ right:14px; }
+  .hero-edit{ position:absolute; top:14px; right:14px; z-index:2; }
+
+  /* ---------- Filtros ---------- */
+  .filters{
+    display:flex; gap:12px; flex-wrap:wrap; align-items:center; background:#fff8ea;
+    border:4px solid var(--carmin); border-radius: 28px; padding: 14px 18px; margin-bottom: 24px;
+    box-shadow: var(--shadow);
+  }
+  .filters input[type=text], .filters select{
+    font-family:'Inter',sans-serif; font-weight:600; font-size:14px; padding: 11px 14px; border-radius: 999px;
+    border: 3px solid var(--line); background:#fff; color: var(--ink); min-width: 150px;
+  }
+  .filters input[type=text]:focus, .filters select:focus{ outline:none; border-color: var(--verdeazul); }
+  .filters .search-field{ flex:1; min-width: 200px; }
+  .view-toggle{ display:flex; gap:5px; background: rgba(68,127,141,0.12); border-radius: 999px; padding:5px; margin-left:auto; border:3px solid var(--line); }
+  .view-toggle button{
+    border:none; background:transparent; padding: 8px 16px; border-radius: 999px; font-weight:700; font-size:13px; color: var(--ink-soft);
+  }
+  .view-toggle button.active{ background: var(--ocre); color: var(--carmin); box-shadow: 0 3px 0 rgba(139,69,69,.25); }
+
+  /* ---------- Grid normal ---------- */
+  .grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(175px,1fr)); gap: 22px; }
+  .card{
+    background:#fff8ea; border-radius: 26px; overflow:hidden; cursor:pointer;
+    border: 4px solid var(--carmin); box-shadow: var(--shadow);
+    transition: transform .16s ease, box-shadow .16s ease;
+    display:flex; flex-direction:column;
+  }
+  .card:hover{ transform: translateY(-5px) rotate(-0.7deg); box-shadow: 0 10px 0 rgba(139,69,69,0.18); }
+  .card .cover{ aspect-ratio: 3/4; background: var(--panel-2); display:flex; align-items:center; justify-content:center; overflow:hidden; border-bottom:4px solid var(--carmin); position:relative; }
+  .card .cover img{ width:100%; height:100%; object-fit:cover; }
+  .card .cover .ph{ font-family:'Baloo 2',sans-serif; font-size:30px; color: var(--ink-soft); opacity:.5; }
+  /* Portada de color cuando el libro no tiene imagen */
+  .card .cover .ph-color, .book-detail .cover-lg .ph-color{
+    width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:6px; padding:14px; text-align:center; color:#fff8ea; opacity:1; position:relative; overflow:hidden;
+  }
+  .card .cover .ph-color::before, .book-detail .cover-lg .ph-color::before{
+    content:""; position:absolute; inset:0;
+    background-image: radial-gradient(circle at 18% 18%, rgba(255,248,234,.28) 0 12%, transparent 13%),
+                      radial-gradient(circle at 78% 32%, rgba(255,248,234,.20) 0 9%, transparent 10%),
+                      radial-gradient(circle at 32% 82%, rgba(255,248,234,.18) 0 11%, transparent 12%);
+  }
+  .card .cover .ph-color .ph-em, x position:relative; font-size:34px; line-height:1; filter: drop-shadow(0 2px 3px rgba(0,0,0,.2)); }
+  .card .cover .ph-color .ph-t, .book-detail .cover-lg .ph-color .ph-t{
+    position:relative; font-family:'Baloo 2',sans-serif; font-weight:800; font-size:14.5px; line-height:1.15;
+    text-shadow: 0 2px 4px rgba(0,0,0,.22); display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden;
+  }
+  .card .info{ padding: 12px 14px 14px; flex:1; display:flex; flex-direction:column; gap:4px; }
+  .card .t{ font-family:'Fredoka','Baloo 2',sans-serif; font-weight:600; font-size: 15px; line-height:1.25; }
+  .card .a{ font-size: 12px; color: var(--ink-soft); font-weight:600; }
+  .card .chips{ display:flex; gap:5px; flex-wrap:wrap; margin-top:auto; padding-top:8px; }
+  .chip{ font-size:10.5px; font-weight:800; padding: 4px 10px; border-radius: 999px; letter-spacing:.03em; border:2px solid transparent; }
+  .chip.genero{ background: rgba(122,75,152,0.16); color: var(--azulvioleta); border-color: rgba(122,75,152,0.35); }
+  .chip.disp{ background: rgba(107,185,107,0.22); color: var(--verde); border-color: rgba(70,139,105,0.45); }
+  .chip.prest{ background: rgba(228,194,97,0.42); color: #7a5c14; border-color: rgba(228,194,97,0.9); }
+  .chip.perdido{ background: rgba(171,71,123,0.18); color: var(--rojovioleta); border-color: rgba(171,71,123,0.4); }
+
+  .empty-msg{
+    text-align:center; padding: 46px 20px; color: var(--ink-soft); font-family:'Fredoka',sans-serif; font-size:17px;
+    background:#fff8ea; border:4px dashed var(--line); border-radius: 28px;
+  }
+
+  /* ---------- Modo carrusel por género ---------- */
+  .genre-row{ margin-bottom: 30px; }
+  .genre-row h3{ font-size: 19px; margin-bottom:12px; display:flex; align-items:center; gap:9px; }
+  .genre-row h3 .dot{ width:16px; height:16px; border-radius:50%; border:3px solid var(--carmin); }
+  .carousel-strip{ display:flex; gap:16px; overflow-x:auto; padding: 4px 2px 10px; scroll-snap-type: x mandatory; }
+  .carousel-strip::-webkit-scrollbar{ height:10px; }
+  .carousel-strip::-webkit-scrollbar-track{ background: rgba(139,69,69,.08); border-radius:8px; }
+  .carousel-strip::-webkit-scrollbar-thumb{ background: var(--verdeclaro); border-radius:8px; }
+  .carousel-strip .card{ min-width: 158px; max-width:158px; scroll-snap-align:start; }
+
+  /* ---------- Modal ---------- */
+  .overlay{ position:fixed; inset:0; background: rgba(75,30,45,0.5); display:none; align-items:center; justify-content:center; padding: 20px; z-index: 50; }
+  .overlay.show{ display:flex; }
+  .modal{ background:#fff8ea; border:5px solid var(--carmin); border-radius: 32px; max-width: 780px; width:100%; max-height: 88vh; overflow:auto; box-shadow: var(--shadow-lg); position:relative; }
+  .modal-close{ position:absolute; top:16px; right:16px; background: var(--ocre); border:3px solid var(--carmin); width:36px; height:36px; border-radius:50%; font-weight:800; font-size:17px; color:var(--carmin); z-index:2; box-shadow:0 3px 0 var(--carmin); }
+  .book-detail{ display:flex; gap: 24px; padding: 30px 28px 28px; flex-wrap:wrap; }
+  .book-detail .cover-lg{ display:flex; width: 220px; flex:none; border-radius: 20px; overflow:hidden; background: var(--panel-2); aspect-ratio:3/4; border:4px solid var(--carmin); box-shadow: var(--shadow); }
+  .book-detail .cover-lg img{ width:100%; height:100%; object-fit:cover; }
+  .book-detail .meta{ flex:1; min-width:240px; }
+  .book-detail h2{ font-size: 26px; margin-bottom: 3px; }
+  .book-detail .author{ color: var(--ink-soft); font-weight:700; margin-bottom:12px; font-family:'Fredoka',sans-serif; }
+  .kv-grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; font-size:13.5px; font-weight:600; margin: 14px 0; }
+  .kv-grid div{ background: rgba(68,127,141,0.09); border:2px solid var(--line); border-radius:14px; padding:8px 12px; }
+  .kv-grid div b{ display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color: var(--ink-soft); font-weight:800; margin-bottom:2px; }
+  .resumen{ font-size: 13.5px; margin-top: 14px; background: rgba(228,194,97,0.22); border:3px solid rgba(228,194,97,0.7); padding: 14px 16px; border-radius: 20px; }
+  .resumen b{ display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin-bottom:5px; }
+  .modal-actions{ display:flex; gap:10px; margin-top:18px; flex-wrap:wrap; align-items:center; }
+
+  /* ---------- Formularios ---------- */
+  .field{ display:flex; flex-direction:column; gap:6px; margin-bottom: 14px; }
+  .field label{ font-size: 11.5px; font-weight:800; color: var(--ink-soft); text-transform:uppercase; letter-spacing:.04em; }
+  .field input, .field textarea, .field select{
+    font-family:'Inter',sans-serif; font-size:14px; font-weight:600; padding: 11px 14px; border-radius: 16px;
+    border: 3px solid var(--line); background:#fff; color: var(--ink);
+  }
+  .field input:focus, .field textarea:focus, .field select:focus{ outline:none; border-color: var(--verdeazul); }
+  .field textarea{ resize:vertical; }
+  .form-note{ font-size:12.5px; color: var(--ink-soft); margin-bottom: 12px; font-weight:600; }
+  .ok-box{ background: rgba(107,185,107,0.16); border:4px solid rgba(70,139,105,0.5); border-radius:26px; padding:22px; text-align:center; }
+  .ok-box .big{ font-size:40px; }
+
+  /* ---------- Editor ---------- */
+  .edit-badge{ background: var(--ocre); color:var(--carmin); font-weight:800; font-size:11.5px; padding:6px 12px; border-radius:999px; border:3px solid var(--carmin); }
+  .cover-upload{ display:flex; flex-direction:column; gap:8px; align-items:flex-start; }
+  .cover-upload .drop{
+    width:150px; aspect-ratio:3/4; border-radius:20px; border:3px dashed var(--line); background:var(--panel-2);
+    display:flex; align-items:center; justify-content:center; overflow:hidden; cursor:pointer; text-align:center; font-size:11.5px; font-weight:600; color:var(--ink-soft); padding:10px;
+  }
+  .cover-upload .drop img{ width:100%; height:100%; object-fit:cover; }
+  .solic-actions{ display:flex; gap:10px; flex-wrap:wrap; }
+
+  .toast{
+    position: fixed; left:50%; bottom:26px; transform: translateX(-50%) translateY(20px);
+    background: var(--carmin); color:#fff8ea; padding: 13px 22px; border-radius: 999px; font-size:14px; font-weight:600;
+    border:3px solid var(--ocre);
+    opacity:0; transition: all .25s ease; z-index: 90; box-shadow: var(--shadow); pointer-events:none;
+  }
+  .toast.show{ opacity:1; transform: translateX(-50%) translateY(0); }
+
+  footer.site{
+    text-align:center; color: var(--ink); font-size:12.5px; font-weight:600; margin-top: 44px;
+    background:#fff8ea; border:4px solid var(--line); border-radius: 26px; padding: 16px 20px;
+  }
+
+  @media (max-width: 640px){
+    .brand h1{ font-size: 21px; }
+    .kv-grid{ grid-template-columns: 1fr; }
+    .book-detail{ flex-direction:column; padding: 26px 20px; }
+    .book-detail .cover-lg{ width: 160px; margin: 0 auto; }
+    .view-toggle{ margin-left:0; width:100%; justify-content:center; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="logo-slot" id="logo-slot"><div class="blob"></div></div>
+      <div>
+        <h1>Catálogo Raíz de Barro</h1>
+        <div class="sub">Biblioteca Comunitaria · descubre y reserva un libro</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <span id="editor-badge" class="edit-badge" style="display:none;">Modo bibliotecario</span>
+      <button class="pill-btn ghost small" id="btn-edit-logo" style="display:none;">Cambiar logo</button>
+      <button class="pill-btn ghost small" id="btn-edit-theme" style="display:none;">Personalizar diseño</button>
+      <input type="file" id="logo-file" accept="image/*" style="display:none;">
+      <button class="pill-btn ghost small" id="btn-staff">Acceso del equipo</button>
+      <button class="pill-btn ghost small" id="btn-logout-staff" style="display:none;">Salir</button>
+    </div>
+  </header>
+
+  <section class="hero" id="hero">
+    <div class="hero-track" id="hero-track"></div>
+    <button class="hero-nav prev" id="hero-prev">‹</button>
+    <button class="hero-nav next" id="hero-next">›</button>
+    <div class="hero-dots" id="hero-dots"></div>
+    <button class="pill-btn small ghost hero-edit" id="btn-edit-hero" style="display:none;">Editar imágenes</button>
+  </section>
+
+  <div class="filters">
+    <div class="field search-field" style="margin:0;">
+      <input type="text" id="f-search" placeholder="Buscar por título o autor…" />
+    </div>
+    <select id="f-genero"><option value="">Todos los géneros</option></select>
+    <select id="f-anio"><option value="">Todos los años</option></select>
+    <select id="f-disp">
+      <option value="">Disponibles y prestados</option>
+      <option value="disponible">Solo disponibles</option>
+    </select>
+    <div class="view-toggle">
+      <button data-view="normal" class="active">Normal</button>
+      <button data-view="carrusel">Carrusel por género</button>
+    </div>
+  </div>
+
+  <div id="catalog-area"></div>
+
+  <footer class="site">Biblioteca Comunitaria Raíz de Barro · Carrera 11 B No. 48 J - Sur 28, Bogotá D.C. · raizdebarro@gmail.com</footer>
+</div>
+
+<!-- Modal: detalle del libro -->
+<div class="overlay" id="overlay-detail">
+  <div class="modal">
+    <button class="modal-close" data-close>×</button>
+    <div class="book-detail" id="book-detail-content"></div>
+  </div>
+</div>
+
+<!-- Modal: reserva -->
+<div class="overlay" id="overlay-reserva">
+  <div class="modal">
+    <button class="modal-close" data-close>×</button>
+    <div style="padding:26px;" id="reserva-content"></div>
+  </div>
+</div>
+
+<!-- Modal: acceso del equipo -->
+<div class="overlay" id="overlay-staff">
+  <div class="modal" style="max-width:380px;">
+    <button class="modal-close" data-close>×</button>
+    <div style="padding:26px;">
+      <h2 style="margin-bottom:4px;">Acceso del equipo</h2>
+      <p class="form-note">Usa el mismo usuario y contraseña del acervo.</p>
+      <div class="field"><label>Usuario</label><input type="email" id="staff-user" placeholder="correo@ejemplo.com"></div>
+      <div class="field"><label>Contraseña</label><input type="password" id="staff-pass"></div>
+      <div id="staff-error" style="color:var(--danger); font-size:12.5px; margin-bottom:10px; display:none;"></div>
+      <button class="pill-btn primary" style="width:100%;" id="staff-login-btn">Ingresar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: editar libro -->
+<div class="overlay" id="overlay-edit">
+  <div class="modal">
+    <button class="modal-close" data-close>×</button>
+    <div style="padding:26px;" id="edit-content"></div>
+  </div>
+</div>
+
+<!-- Modal: recortar imagen del panel de inicio -->
+<div class="overlay" id="overlay-crop">
+  <div class="modal" style="max-width:560px;">
+    <button class="modal-close" data-close>×</button>
+    <div style="padding:26px;">
+      <h2 style="margin-bottom:4px;">Ajusta la imagen</h2>
+      <p class="form-note">Arrastra para mover la foto y usa la barra para acercar. Así eliges qué parte se verá en el panel de inicio.</p>
+      <div class="crop-viewport" id="crop-viewport">
+        <img id="crop-img" draggable="false" alt="">
+      </div>
+      <input type="range" id="crop-zoom" min="100" max="260" value="100" style="width:100%; margin-top:14px;">
+      <button class="pill-btn primary" style="width:100%; margin-top:14px;" id="crop-confirm">Usar esta selección</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+  function escapeHtml(s){ return String(s==null?"":s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+  function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toast._h); toast._h=setTimeout(()=>t.classList.remove("show"),2600); }
+
+  // ---------------------------------------------------------------------
+  // Conexión a Supabase — el MISMO proyecto que usa el acervo.
+  // ---------------------------------------------------------------------
+  const SUPABASE_URL = "https://amitgegxrmnwjiqzttmq.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable__JzdFnQ9DsP1PCZXhhGdOQ_lSmt7LkG";
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const GENRE_COLORS = ["--ocre","--esmeralda","--verdeazul","--azulvioleta","--rojovioleta","--azul","--verde","--verdeamarillo"];
+  function genreColor(name){
+    let h = 0; for(const c of String(name)) h = (h*31 + c.charCodeAt(0)) % GENRE_COLORS.length;
+    return `var(${GENRE_COLORS[h]})`;
+  }
+
+  let books = [];
+  let carrusel = [];
+  let isEditor = false;
+  let viewMode = "normal";
+  let heroIndex = 0;
+
+  // ---------------------------------------------------------------------
+  // Carga de datos (kv_store: mismas llaves "books" y "carrusel_inicio"
+  // que usa/usará el acervo).
+  // ---------------------------------------------------------------------
+  async function kvGet(key){
+    try{
+      const { data, error } = await supabaseClient.from("kv_store").select("value").eq("key", key).maybeSingle();
+      if(error || !data) return null;
+      return data.value;
+    }catch(e){ return null; }
+  }
+  async function kvSet(key, value){
+    try{
+      const { error } = await supabaseClient.from("kv_store").upsert({ key, value, updated_at: new Date().toISOString() });
+      return !error;
+    }catch(e){ return false; }
+  }
+
+  async function loadBooks(){
+    const raw = await kvGet("books");
+    books = raw ? JSON.parse(raw) : [];
+    books.forEach(b=>{
+      if(b.genero === undefined) b.genero = "";
+      if(b.anioPublicacion === undefined) b.anioPublicacion = "";
+      if(b.portadaUrl === undefined) b.portadaUrl = "";
+      if(b.resumen === undefined) b.resumen = "";
+      if(b.estado === undefined) b.estado = "disponible";
+    });
+  }
+  async function saveBooks(){
+    const ok = await kvSet("books", JSON.stringify(books));
+    if(!ok) toast("No se pudo guardar el cambio. Intenta de nuevo.");
+    return ok;
+  }
+  async function loadCarrusel(){
+    const raw = await kvGet("carrusel_inicio");
+    carrusel = raw ? JSON.parse(raw) : [];
+  }
+  async function saveCarrusel(){
+    await kvSet("carrusel_inicio", JSON.stringify(carrusel));
+  }
+
+  // ---------------------------------------------------------------------
+  // Hero / carrusel de inicio
+  // ---------------------------------------------------------------------
+  function renderHero(){
+    const track = $("#hero-track"), dots = $("#hero-dots");
+    if(carrusel.length === 0){
+      track.innerHTML = `<div class="hero-slide empty"><div class="cap">📚 Bienvenidos a la Biblioteca Raíz de Barro</div></div>`;
+      dots.innerHTML = "";
+      $("#hero-prev").style.display = "none"; $("#hero-next").style.display = "none";
+      return;
+    }
+    $("#hero-prev").style.display = ""; $("#hero-next").style.display = "";
+    track.innerHTML = carrusel.map(s => `<div class="hero-slide" style="background-image:url('${escapeHtml(s.url)}')"><div class="cap">${escapeHtml(s.caption||"")}</div></div>`).join("");
+    dots.innerHTML = carrusel.map((_,i)=>`<span data-i="${i}" class="${i===heroIndex?'active':''}"></span>`).join("");
+    track.style.transform = `translateX(-${heroIndex*100}%)`;
+  }
+  $("#hero-prev").addEventListener("click", ()=>{ if(!carrusel.length) return; heroIndex=(heroIndex-1+carrusel.length)%carrusel.length; renderHero(); });
+  $("#hero-next").addEventListener("click", ()=>{ if(!carrusel.length) return; heroIndex=(heroIndex+1)%carrusel.length; renderHero(); });
+  $("#hero-dots").addEventListener("click", e=>{ if(e.target.dataset.i===undefined) return; heroIndex=+e.target.dataset.i; renderHero(); });
+  setInterval(()=>{ if(carrusel.length>1){ heroIndex=(heroIndex+1)%carrusel.length; renderHero(); } }, 6000);
+
+  // ---------------------------------------------------------------------
+  // Filtros
+  // ---------------------------------------------------------------------
+  function populateFilterOptions(){
+    const generos = [...new Set(books.map(b=>b.genero).filter(Boolean))].sort();
+    const anios = [...new Set(books.map(b=>b.anioPublicacion).filter(Boolean))].sort().reverse();
+    $("#f-genero").innerHTML = `<option value="">Todos los géneros</option>` + generos.map(g=>`<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join("");
+    $("#f-anio").innerHTML = `<option value="">Todos los años</option>` + anios.map(a=>`<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join("");
+  }
+  function filteredBooks(){
+    const q = $("#f-search").value.trim().toLowerCase();
+    const g = $("#f-genero").value;
+    const a = $("#f-anio").value;
+    const d = $("#f-disp").value;
+    return books.filter(b=>{
+      if(q && !((b.titulo||"").toLowerCase().includes(q) || (b.autor||"").toLowerCase().includes(q))) return false;
+      if(g && b.genero !== g) return false;
+      if(a && String(b.anioPublicacion) !== String(a)) return false;
+      if(d === "disponible" && b.estado !== "disponible") return false;
+      return true;
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // Render de tarjetas
+  // ---------------------------------------------------------------------
+  // Portada de color para libros sin imagen: color y emoji estables por título.
+  const PH_PALETTE = [
+    ["--verdeazul","--verdeclaro"], ["--azulvioleta","--rojovioleta"],
+    ["--esmeralda","--verdeamarillo"], ["--azul","--verdeazul"],
+    ["--rojovioleta","--ocre"], ["--verde","--esmeralda"],
+    ["--ocre","--verdeamarillo"], ["--carmin","--rojovioleta"]
+  ];
+  const PH_EMOJIS = ["📖","📚","🌱","🦋","⭐","🌈","🐦","🌻","🚀","🐌"];
+  function phHash(s){
+    let h = 0; for(const c of String(s||"libro")) h = (h*31 + c.charCodeAt(0)) % 100003;
+    return h;
+  }
+  function coverImg(b){
+    if(b.portadaUrl){
+      return `<img src="${escapeHtml(b.portadaUrl)}" alt="Carátula de ${escapeHtml(b.titulo)}" loading="lazy">`;
+    }
+    const h = phHash((b.titulo||"") + "·" + (b.autor||""));
+    const [c1, c2] = PH_PALETTE[h % PH_PALETTE.length];
+    const em = PH_EMOJIS[Math.floor(h/7) % PH_EMOJIS.length];
+    return `<div class="ph ph-color" style="background:linear-gradient(150deg, var(${c1}), var(${c2}))">
+      <span class="ph-em">${em}</span>
+      <span class="ph-t">${escapeHtml(b.titulo||"Sin título")}</span>
+    </div>`;
+  }
+  function cardHtml(b){
+    const dispChip = b.estado === "disponible" ? `<span class="chip disp">Disponible</span>` : (b.estado === "perdido" ? `<span class="chip perdido">No disponible</span>` : `<span class="chip prest">Prestado</span>`);
+    const genChip = b.genero ? `<span class="chip genero">${escapeHtml(b.genero)}</span>` : "";
+    return `<div class="card" data-id="${escapeHtml(b.id)}">
+      <div class="cover">${coverImg(b)}</div>
+      <div class="info">
+        <div class="t">${escapeHtml(b.titulo||"Sin título")}</div>
+        <div class="a">${escapeHtml(b.autor||"Autor desconocido")}</div>
+        <div class="chips">${genChip}${dispChip}</div>
+      </div>
+    </div>`;
+  }
+  function renderCatalog(){
+    const area = $("#catalog-area");
+    const list = filteredBooks();
+    if(list.length === 0){
+      area.innerHTML = `<div class="empty-msg">🐛 No encontramos libros con esos filtros. ¡Prueba buscando algo distinto!</div>`;
+      return;
+    }
+    if(viewMode === "normal"){
+      area.innerHTML = `<div class="grid">${list.map(cardHtml).join("")}</div>`;
+    }else{
+      const byGenre = {};
+      list.forEach(b=>{ const g = b.genero || "Sin género"; (byGenre[g] = byGenre[g]||[]).push(b); });
+      area.innerHTML = Object.keys(byGenre).sort().map(g => `
+        <div class="genre-row">
+          <h3><span class="dot" style="background:${genreColor(g)}"></span>${escapeHtml(g)} <span style="font-weight:400;color:var(--ink-soft);font-size:12px;">(${byGenre[g].length})</span></h3>
+          <div class="carousel-strip">${byGenre[g].map(cardHtml).join("")}</div>
+        </div>`).join("");
+    }
+    $$(".card").forEach(card => card.addEventListener("click", ()=> openDetail(card.dataset.id)));
+  }
+
+  $("#f-search").addEventListener("input", renderCatalog);
+  $("#f-genero").addEventListener("change", renderCatalog);
+  $("#f-anio").addEventListener("change", renderCatalog);
+  $("#f-disp").addEventListener("change", renderCatalog);
+  $$(".view-toggle button").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      $$(".view-toggle button").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active"); viewMode = btn.dataset.view; renderCatalog();
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // Modal de detalle
+  // ---------------------------------------------------------------------
+  function openDetail(id){
+    const b = books.find(x=>String(x.id)===String(id));
+    if(!b) return;
+    const editBtn = isEditor ? `<button class="pill-btn ghost small" id="btn-edit-book">✏️ Editar en el catálogo</button>` : "";
+    $("#book-detail-content").innerHTML = `
+      <div class="cover-lg">${coverImg(b)}</div>
+      <div class="meta">
+        <h2>${escapeHtml(b.titulo||"Sin título")}</h2>
+        <div class="author">${escapeHtml(b.autor||"Autor desconocido")}${b.autoresAdicionales&&b.autoresAdicionales.length?", "+escapeHtml(b.autoresAdicionales.join(", ")):""}</div>
+        <div class="kv-grid">
+          <div><b>Género</b>${escapeHtml(b.genero||"—")}</div>
+          <div><b>Año de publicación</b>${escapeHtml(b.anioPublicacion||"—")}</div>
+          <div><b>Editorial</b>${escapeHtml(b.editorial||"—")}</div>
+          <div><b>Idioma</b>${escapeHtml(b.idioma||"—")}</div>
+          <div><b>ISBN</b>${escapeHtml(b.isbn||"—")}</div>
+          <div><b>Rótulo / clasificación</b>${escapeHtml(b.rotulo||b.clasificacion||"—")}</div>
+          <div><b>Estado</b>${b.estado==="disponible"?"Disponible":(b.estado==="perdido"?"No disponible (perdido/dañado)":"Prestado")}</div>
+        </div>
+        ${b.resumen ? `<div class="resumen"><b>Resumen</b>${escapeHtml(b.resumen)}</div>` : ""}
+        <div class="modal-actions">
+          ${b.estado === "disponible"
+            ? `<button class="pill-btn primary" id="btn-reservar">📚 Reservar este libro</button>`
+            : `<span class="chip ${b.estado==="perdido"?"perdido":"prest"}" style="padding:9px 16px;">${b.estado==="perdido"?"No disponible por el momento":"Actualmente prestado"}</span>`}
+          ${editBtn}
+        </div>
+      </div>`;
+    $("#overlay-detail").classList.add("show");
+    if(b.estado === "disponible") $("#btn-reservar").addEventListener("click", ()=>{ $("#overlay-detail").classList.remove("show"); openReserva(b); });
+    if(isEditor) $("#btn-edit-book").addEventListener("click", ()=>{ $("#overlay-detail").classList.remove("show"); openEdit(b); });
+  }
+
+  // ---------------------------------------------------------------------
+  // Reserva de préstamo → tabla solicitudes_prestamo (visible en el acervo)
+  // ---------------------------------------------------------------------
+  function openReserva(b){
+    $("#reserva-content").innerHTML = `
+      <h2>Reservar «${escapeHtml(b.titulo)}»</h2>
+      <p class="form-note">Completa tus datos. El equipo de la biblioteca confirmará tu préstamo.</p>
+      <div class="field"><label>Nombre completo</label><input id="r-nombre"></div>
+      <div class="field"><label>Documento de identidad</label><input id="r-doc"></div>
+      <div class="field"><label>Teléfono</label><input id="r-tel"></div>
+      <div class="field"><label>Correo electrónico</label><input id="r-mail" type="email"></div>
+      <button class="pill-btn primary" style="width:100%;" id="r-submit">Confirmar reserva</button>`;
+    $("#overlay-reserva").classList.add("show");
+    $("#r-submit").addEventListener("click", async ()=>{
+      const nombre = $("#r-nombre").value.trim(), doc = $("#r-doc").value.trim(), tel = $("#r-tel").value.trim(), mail = $("#r-mail").value.trim();
+      if(!nombre || !doc || !tel || !mail){ toast("Por favor completa todos los datos."); return; }
+      const btn = $("#r-submit"); btn.disabled = true; btn.textContent = "Enviando…";
+      const { error } = await supabaseClient.from("solicitudes_prestamo").insert([{
+        libro_id: String(b.id), titulo: b.titulo, autor: b.autor,
+        nombre_completo: nombre, documento: doc, telefono: tel, correo: mail
+      }]);
+      btn.disabled = false;
+      if(error){ toast("No se pudo enviar la reserva. Intenta de nuevo."); btn.textContent = "Confirmar reserva"; return; }
+      $("#reserva-content").innerHTML = `<div class="ok-box"><div class="big">🎉</div><h3>¡Reserva enviada!</h3><p>Te contactaremos pronto para confirmar tu préstamo de «${escapeHtml(b.titulo)}».</p></div>`;
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // Acceso del equipo (mismo Auth que el acervo)
+  // ---------------------------------------------------------------------
+  $("#btn-staff").addEventListener("click", ()=> $("#overlay-staff").classList.add("show"));
+  $("#staff-login-btn").addEventListener("click", async ()=>{
+    const user = $("#staff-user").value.trim().toLowerCase();
+    const pass = $("#staff-pass").value;
+    const err = $("#staff-error"); err.style.display = "none";
+    const { error } = await supabaseClient.auth.signInWithPassword({ email:user, password:pass });
+    if(error){ err.textContent = "Usuario o contraseña incorrectos."; err.style.display = "block"; return; }
+    isEditor = true; onEditorStateChange();
+    $("#overlay-staff").classList.remove("show");
+    toast("Sesión iniciada como bibliotecario.");
+  });
+  $("#btn-logout-staff").addEventListener("click", async ()=>{
+    await supabaseClient.auth.signOut(); isEditor = false; onEditorStateChange();
+  });
+  function onEditorStateChange(){
+    $("#editor-badge").style.display = isEditor ? "" : "none";
+    $("#btn-staff").style.display = isEditor ? "none" : "";
+    $("#btn-logout-staff").style.display = isEditor ? "" : "none";
+    $("#btn-edit-hero").style.display = isEditor ? "" : "none";
+    $("#btn-edit-logo").style.display = isEditor ? "" : "none";
+    $("#btn-edit-theme").style.display = isEditor ? "" : "none";
+  }
+
+  // ---------------------------------------------------------------------
+  // Edición de libros (solo bibliotecarios)
+  // ---------------------------------------------------------------------
+  function openEdit(b){
+    $("#edit-content").innerHTML = `
+      <h2>Editar libro</h2>
+      <p class="form-note">Los cambios se guardan también en el acervo.</p>
+      <div style="display:flex; gap:20px; flex-wrap:wrap;">
+        <div class="cover-upload">
+          <label style="font-size:11.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;">Carátula</label>
+          <div class="drop" id="e-drop">${b.portadaUrl?`<img src="${escapeHtml(b.portadaUrl)}">`:"Toca para subir una carátula (se mejora automáticamente)"}</div>
+          <input type="file" id="e-file" accept="image/*" style="display:none;">
+        </div>
+        <div style="flex:1; min-width:240px;">
+          <div class="field"><label>Título</label><input id="e-titulo" value="${escapeHtml(b.titulo)}"></div>
+          <div class="field"><label>Autor</label><input id="e-autor" value="${escapeHtml(b.autor)}"></div>
+          <div class="field"><label>Género</label><input id="e-genero" value="${escapeHtml(b.genero)}" list="genero-list">
+            <datalist id="genero-list"><option>Cuento infantil</option><option>Novela</option><option>Poesía</option><option>Cómic / novela gráfica</option><option>Ciencia y naturaleza</option><option>Historia</option><option>Autoayuda</option><option>Referencia</option></datalist>
+          </div>
+          <div class="field"><label>Año de publicación</label><input id="e-anio" value="${escapeHtml(b.anioPublicacion)}"></div>
+          <div class="field"><label>Editorial</label><input id="e-editorial" value="${escapeHtml(b.editorial)}"></div>
+        </div>
+      </div>
+      <div class="field"><label>Resumen</label><textarea id="e-resumen" rows="4">${escapeHtml(b.resumen)}</textarea></div>
+      <button class="pill-btn primary" style="width:100%;" id="e-save">Guardar cambios</button>`;
+    $("#overlay-edit").classList.add("show");
+    $("#e-drop").addEventListener("click", ()=> $("#e-file").click());
+    $("#e-file").addEventListener("change", async (e)=>{
+      const file = e.target.files[0]; if(!file) return;
+      toast("Mejorando y subiendo imagen…");
+      try{
+        const blob = await enhanceCoverImage(file);
+        const path = `${b.id}-${Date.now()}.jpg`;
+        const { error: upErr } = await supabaseClient.storage.from("portadas").upload(path, blob, { upsert:true, contentType:"image/jpeg" });
+        if(upErr) throw upErr;
+        const { data } = supabaseClient.storage.from("portadas").getPublicUrl(path);
+        b.portadaUrl = data.publicUrl;
+        $("#e-drop").innerHTML = `<img src="${escapeHtml(b.portadaUrl)}">`;
+        toast("Carátula lista.");
+      }catch(err){ toast("No se pudo subir la imagen."); }
+    });
+    $("#e-save").addEventListener("click", async ()=>{
+      b.titulo = $("#e-titulo").value.trim();
+      b.autor = $("#e-autor").value.trim();
+      b.genero = $("#e-genero").value.trim();
+      b.anioPublicacion = $("#e-anio").value.trim();
+      b.editorial = $("#e-editorial").value.trim();
+      b.resumen = $("#e-resumen").value.trim();
+      const ok = await saveBooks();
+      if(ok){ toast("Libro actualizado."); $("#overlay-edit").classList.remove("show"); populateFilterOptions(); renderCatalog(); }
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // Mejora automática de imágenes: balance de blancos y estiramiento de
+  // contraste por canal, aplicado sobre un canvas ya recortado.
+  // ---------------------------------------------------------------------
+  function enhanceCanvas(ctx, W, H){
+    const imgData = ctx.getImageData(0,0,W,H);
+    const d = imgData.data;
+    let min=[255,255,255], max=[0,0,0];
+    for(let i=0;i<d.length;i+=4){
+      for(let c=0;c<3;c++){ if(d[i+c]<min[c]) min[c]=d[i+c]; if(d[i+c]>max[c]) max[c]=d[i+c]; }
+    }
+    for(let i=0;i<d.length;i+=4){
+      for(let c=0;c<3;c++){
+        const range = Math.max(1, max[c]-min[c]);
+        let v = (d[i+c]-min[c]) * (255/range);
+        v = (v-128)*1.08 + 128 + 6;
+        d[i+c] = Math.max(0, Math.min(255, v));
+      }
+    }
+    ctx.putImageData(imgData,0,0);
+  }
+
+  function enhanceCoverImage(file, W=600, H=800){
+    return new Promise((resolve, reject)=>{
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = ()=> img.src = reader.result;
+      reader.onerror = reject;
+      img.onload = ()=>{
+        const canvas = document.createElement("canvas");
+        canvas.width = W; canvas.height = H;
+        const ctx = canvas.getContext("2d");
+        const srcRatio = img.width / img.height, dstRatio = W / H;
+        let sx=0, sy=0, sw=img.width, sh=img.height;
+        if(srcRatio > dstRatio){ sw = img.height * dstRatio; sx = (img.width - sw)/2; }
+        else{ sh = img.width / dstRatio; sy = (img.height - sh)/2; }
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
+        enhanceCanvas(ctx, W, H);
+        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("sin blob")), "image/jpeg", 0.88);
+      };
+      img.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  let cropState = null;
+
+  function openCropper(file, onConfirm){
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = ()=>{
+      const vp = $("#crop-viewport");
+      const viewW = vp.clientWidth || 480;
+      const viewH = vp.clientHeight || Math.round(viewW*9/21);
+      const baseScale = Math.max(viewW/img.naturalWidth, viewH/img.naturalHeight);
+      const dispW = img.naturalWidth*baseScale, dispH = img.naturalHeight*baseScale;
+      cropState = {
+        img, naturalW: img.naturalWidth, naturalH: img.naturalHeight,
+        baseScale, zoom: 1, viewW, viewH,
+        offX: (viewW - dispW)/2, offY: (viewH - dispH)/2,
+        onConfirm, objectUrl: url
+      };
+      $("#crop-img").src = url;
+      $("#crop-zoom").value = 100;
+      applyCropTransform();
+      $("#overlay-crop").classList.add("show");
+    };
+    img.onerror = ()=> toast("No se pudo cargar la imagen.");
+    img.src = url;
+  }
+
+  function clampCropOffsets(){
+    const s = cropState; if(!s) return;
+    const scale = s.baseScale * s.zoom;
+    const dispW = s.naturalW*scale, dispH = s.naturalH*scale;
+    s.offX = Math.max(Math.min(0, s.viewW - dispW), Math.min(0, s.offX));
+    s.offY = Math.max(Math.min(0, s.viewH - dispH), Math.min(0, s.offY));
+  }
+
+  function applyCropTransform(){
+    const s = cropState; if(!s) return;
+    clampCropOffsets();
+    const scale = s.baseScale * s.zoom;
+    const el = $("#crop-img");
+    el.style.width = (s.naturalW*scale)+"px";
+    el.style.height = (s.naturalH*scale)+"px";
+    el.style.transform = `translate(${s.offX}px, ${s.offY}px)`;
+  }
+
+  (function setupCropDrag(){
+    const vp = $("#crop-viewport");
+    let dragging=false, startX=0, startY=0, startOffX=0, startOffY=0;
+    vp.addEventListener("pointerdown", e=>{
+      if(!cropState) return;
+      dragging=true; vp.setPointerCapture(e.pointerId);
+      startX=e.clientX; startY=e.clientY; startOffX=cropState.offX; startOffY=cropState.offY;
+    });
+    vp.addEventListener("pointermove", e=>{
+      if(!dragging || !cropState) return;
+      cropState.offX = startOffX + (e.clientX-startX);
+      cropState.offY = startOffY + (e.clientY-startY);
+      applyCropTransform();
+    });
+    vp.addEventListener("pointerup", ()=> dragging=false);
+    vp.addEventListener("pointercancel", ()=> dragging=false);
+  })();
+
+  $("#crop-zoom").addEventListener("input", e=>{
+    if(!cropState) return;
+    cropState.zoom = e.target.value/100;
+    applyCropTransform();
+  });
+
+  $("#crop-confirm").addEventListener("click", ()=>{
+    const s = cropState; if(!s) return;
+    const scale = s.baseScale * s.zoom;
+    const sx = -s.offX/scale, sy = -s.offY/scale;
+    const sw = s.viewW/scale, sh = s.viewH/scale;
+    const OUT_W = 1200, OUT_H = Math.round(OUT_W * s.viewH/s.viewW);
+    const canvas = document.createElement("canvas");
+    canvas.width = OUT_W; canvas.height = OUT_H;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(s.img, sx, sy, sw, sh, 0, 0, OUT_W, OUT_H);
+    enhanceCanvas(ctx, OUT_W, OUT_H);
+    canvas.toBlob(blob=>{
+      $("#overlay-crop").classList.remove("show");
+      URL.revokeObjectURL(s.objectUrl);
+      const cb = s.onConfirm; cropState = null;
+      if(blob && cb) cb(blob);
+      else if(!blob) toast("No se pudo procesar la imagen.");
+    }, "image/jpeg", 0.88);
+  });
+
+  const THEME_FIELDS = [
+    { key: "--bg", label: "Fondo de la página" },
+    { key: "--ink", label: "Texto / acento principal" },
+    { key: "--ink-soft", label: "Texto secundario" },
+    { key: "--ocre", label: "Color 1 (ocre)" },
+    { key: "--esmeralda", label: "Color 2 (esmeralda)" },
+    { key: "--verdeazul", label: "Color 3 (verde azulado)" },
+    { key: "--azulvioleta", label: "Color 4 (azul violeta)" },
+    { key: "--rojovioleta", label: "Color 5 (rojo violeta)" },
+    { key: "--azul", label: "Color 6 (azul)" },
+    { key: "--verde", label: "Color 7 (verde)" },
+    { key: "--verdeamarillo", label: "Color 8 (verde amarillo)" }
+  ];
+  const DEFAULT_THEME = {
+    "--bg":"#fffaf1", "--ink":"#8b4545", "--ink-soft":"#7a4b98",
+    "--ocre":"#e4c261", "--esmeralda":"#6bb96b", "--verdeazul":"#447f8d",
+    "--azulvioleta":"#7a4b98", "--rojovioleta":"#ab477b", "--azul":"#4a69ac",
+    "--verde":"#468b69", "--verdeamarillo":"#accb49"
+  };
+  let themeOverrides = {};
+
+  function applyTheme(){
+    Object.entries(themeOverrides).forEach(([k,v])=> document.documentElement.style.setProperty(k, v));
+  }
+  function currentThemeValue(key){
+    if(themeOverrides[key]) return themeOverrides[key];
+    const v = getComputedStyle(document.documentElement).getPropertyValue(key).trim();
+    return v || DEFAULT_THEME[key] || "#000000";
+  }
+
+  $("#btn-edit-theme").addEventListener("click", ()=>{
+    $("#edit-content").innerHTML = `
+      <h2>Personalizar diseño</h2>
+      <p class="form-note">Elige los colores del catálogo. Los cambios se ven al instante y quedan guardados para todos los visitantes.</p>
+      <div class="theme-grid">
+        ${THEME_FIELDS.map(f => `
+          <div class="theme-field">
+            <input type="color" data-var="${f.key}" value="${currentThemeValue(f.key)}">
+            <label>${escapeHtml(f.label)}</label>
+          </div>`).join("")}
+      </div>
+      <div class="solic-actions" style="margin-top:0;">
+        <button class="pill-btn primary" id="theme-save">Guardar colores</button>
+        <button class="pill-btn ghost" id="theme-reset">Restablecer colores originales</button>
+      </div>`;
+    $("#overlay-edit").classList.add("show");
+
+    $$("#edit-content input[type=color]").forEach(inp=>{
+      inp.addEventListener("input", ()=> document.documentElement.style.setProperty(inp.dataset.var, inp.value));
+    });
+    $("#theme-save").addEventListener("click", async ()=>{
+      $$("#edit-content input[type=color]").forEach(inp=>{ themeOverrides[inp.dataset.var] = inp.value; });
+      applyTheme();
+      await saveConfig();
+      toast("Colores guardados.");
+      $("#overlay-edit").classList.remove("show");
+    });
+    $("#theme-reset").addEventListener("click", async ()=>{
+      Object.keys(themeOverrides).forEach(k => document.documentElement.style.removeProperty(k));
+      themeOverrides = {};
+      await saveConfig();
+      toast("Colores originales restablecidos.");
+      $("#overlay-edit").classList.remove("show");
+    });
+  });
+
+  let logoUrl = "";
+  function renderLogo(){
+    $("#logo-slot").innerHTML = logoUrl
+      ? `<img src="${escapeHtml(logoUrl)}" alt="Logo de la biblioteca">`
+      : `<div class="blob"></div>`;
+  }
+  async function loadConfig(){
+    const raw = await kvGet("config_catalogo");
+    const cfg = raw ? JSON.parse(raw) : {};
+    logoUrl = cfg.logoUrl || "";
+    themeOverrides = cfg.theme || {};
+    applyTheme();
+  }
+  async function saveConfig(){
+    await kvSet("config_catalogo", JSON.stringify({ logoUrl, theme: themeOverrides }));
+  }
+  $("#btn-edit-logo").addEventListener("click", ()=> $("#logo-file").click());
+  $("#logo-file").addEventListener("change", async (e)=>{
+    const file = e.target.files[0]; if(!file) return;
+    toast("Actualizando logo…");
+    try{
+      const blob = await enhanceCoverImage(file, 240, 240);
+      const path = `logo-${Date.now()}.jpg`;
+      const { error } = await supabaseClient.storage.from("carrusel").upload(path, blob, { upsert:true, contentType:"image/jpeg" });
+      if(error) throw error;
+      const { data } = supabaseClient.storage.from("carrusel").getPublicUrl(path);
+      logoUrl = data.publicUrl;
+      await saveConfig();
+      renderLogo();
+      toast("Logo actualizado.");
+    }catch(err){ toast("No se pudo actualizar el logo."); }
+    e.target.value = "";
+  });
+
+  $("#btn-edit-hero").addEventListener("click", ()=>{
+    $("#edit-content").innerHTML = `
+      <h2>Imágenes del panel de inicio</h2>
+      <p class="form-note">Sube imágenes destacadas para la portada del catálogo. Podrás elegir qué parte de cada foto se muestra.</p>
+      <div id="hero-list" style="display:flex; flex-direction:column; gap:10px; margin-bottom:14px;"></div>
+      <input type="file" id="hero-file" accept="image/*" style="display:none;">
+      <button class="pill-btn ghost" id="hero-add">+ Agregar imagen</button>`;
+    renderHeroEditList();
+    $("#overlay-edit").classList.add("show");
+    $("#hero-add").addEventListener("click", ()=> $("#hero-file").click());
+    $("#hero-file").addEventListener("change", (e)=>{
+      const file = e.target.files[0]; if(!file) return;
+      openCropper(file, async (blob)=>{
+        toast("Subiendo imagen…");
+        try{
+          const path = `hero-${Date.now()}.jpg`;
+          const { error } = await supabaseClient.storage.from("carrusel").upload(path, blob, { upsert:true, contentType:"image/jpeg" });
+          if(error) throw error;
+          const { data } = supabaseClient.storage.from("carrusel").getPublicUrl(path);
+          carrusel.push({ url: data.publicUrl, caption: "" });
+          await saveCarrusel(); renderHeroEditList(); renderHero();
+          toast("Imagen agregada.");
+        }catch(err){ toast("No se pudo subir la imagen."); }
+      });
+      e.target.value = "";
+    });
+  });
+  function renderHeroEditList(){
+    $("#hero-list").innerHTML = carrusel.map((s,i)=>`
+      <div style="display:flex; gap:10px; align-items:center;">
+        <img src="${escapeHtml(s.url)}" style="width:60px;height:44px;object-fit:cover;border-radius:8px;">
+        <input data-i="${i}" class="hero-cap" value="${escapeHtml(s.caption||"")}" placeholder="Texto sobre la imagen" style="flex:1; padding:8px 10px; border-radius:10px; border:2px solid var(--line);">
+        <button class="pill-btn ghost small" data-remove="${i}">Quitar</button>
+      </div>`).join("") || `<p class="form-note">Aún no hay imágenes.</p>`;
+    $$(".hero-cap").forEach(inp => inp.addEventListener("change", async ()=>{ carrusel[+inp.dataset.i].caption = inp.value; await saveCarrusel(); renderHero(); }));
+    $$("[data-remove]").forEach(btn => btn.addEventListener("click", async ()=>{ carrusel.splice(+btn.dataset.remove,1); await saveCarrusel(); renderHeroEditList(); renderHero(); }));
+  }
+
+  // ---------------------------------------------------------------------
+  // Cierre de modales
+  // ---------------------------------------------------------------------
+  $$("[data-close]").forEach(btn => btn.addEventListener("click", ()=> btn.closest(".overlay").classList.remove("show")));
+  $$(".overlay").forEach(ov => ov.addEventListener("click", e=>{ if(e.target === ov) ov.classList.remove("show"); }));
+
+  // ---------------------------------------------------------------------
+  // Inicio
+  // ---------------------------------------------------------------------
+  async function init(){
+    try{
+      const { data } = await supabaseClient.auth.getSession();
+      if(data && data.session) isEditor = true;
+    }catch(e){}
+    onEditorStateChange();
+    await Promise.all([loadBooks(), loadCarrusel(), loadConfig()]);
+    populateFilterOptions();
+    renderCatalog();
+    renderHero();
+    renderLogo();
+  }
+  init();
+})();
+</script>
